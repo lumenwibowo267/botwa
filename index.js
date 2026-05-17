@@ -17,26 +17,24 @@ async function startBot() {
     });
 
     sock.ev.on("connection.update", (update) => {
+        const { connection, qr } = update;
 
-        // 🔥 FIX PENTING: ambil qr dengan aman
-        const qr = update.qr;
-        const connection = update.connection;
-
+        // 🔥 INI BAGIAN PENTING
         if (qr) {
             console.clear();
-            console.log("SCAN QR DI WHATSAPP:\n");
+            console.log("\n=== SCAN QR DI WHATSAPP ===\n");
 
             qrcode.generate(qr, {
-                small: false
+                small: false   // jangan small biar tidak rusak
             });
         }
 
         if (connection === "open") {
-            console.log("✅ BOT CONNECTED");
+            console.log("BOT CONNECTED");
         }
 
         if (connection === "close") {
-            console.log("❌ CONNECTION CLOSED");
+            console.log("CONNECTION CLOSED");
         }
     });
 
