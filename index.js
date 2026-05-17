@@ -1,37 +1,40 @@
 const express = require("express");
 const qrcode = require("qrcode");
 
-const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    fetchLatestBaileysVersion
-} = require("@whiskeysockets/baileys");
-
 const app = express();
 
 let latestQR = null;
 
-// DEBUG biar yakin server hidup
+// 🔥 PENTING: selalu ambil QR terbaru saat request
 app.get("/", async (req, res) => {
+    console.log("WEB OPENED");
+
     if (!latestQR) {
-        return res.send("QR belum tersedia, tunggu...");
+        return res.send(`
+            <h2>QR belum tersedia</h2>
+            <p>Tunggu bot generate QR...</p>
+        `);
     }
 
-    const img = await qrcode.toDataURL(latestQR);
+    try {
+        const img = await qrcode.toDataURL(latestQR);
 
-    res.send(`
-        <html>
-        <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:Arial;">
-            <h2>SCAN QR WHATSAPP</h2>
-            <img src="${img}" width="300" height="300" />
-            <p>Refresh jika belum muncul</p>
-        </body>
-        </html>
-    `);
+        return res.send(`
+            <html>
+            <body style="text-align:center;font-family:Arial;">
+                <h2>SCAN QR WHATSAPP</h2>
+                <img src="${img}" width="300" />
+                <p>Refresh jika QR belum muncul</p>
+            </body>
+            </html>
+        `);
+    } catch (err) {
+        return res.send("Error render QR");
+    }
 });
 
-app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
-    console.log("SERVER RUNNING");
+app.listen(3000, "0.0.0.0", () => {
+    console.log("SERVER RUNNING http://localhost:3000");
 });
 
 async function startBot() {
@@ -44,22 +47,15 @@ async function startBot() {
         printQRInTerminal: false
     });
 
-    sock.ev.on("connection.update", (update) => {
-        const { connection, qr } = update;
+sock.ev.on("connection.update", (update) => {
+    const { qr } = update;
 
-        if (qr) {
-            latestQR = qr;
-            console.log("QR LENGTH:", latestQR?.length);
-        }
-
-        if (connection === "open") {
-            console.log("✅ CONNECTED");
-        }
-
-        if (connection === "close") {
-            console.log("❌ CLOSED");
-        }
-    });
+    if (qr) {
+        latestQR = qr;
+        console.log("QR UPDATED → WEB READY");
+        console.log("QR LENGTH:", qr.length);
+    }
+});
 
     sock.ev.on("creds.update", saveCreds);
 }
