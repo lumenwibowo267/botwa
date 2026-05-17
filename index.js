@@ -1,3 +1,4 @@
+console.log("🚀 BOT STARTED:", new Date().toISOString());
 const express = require("express");
 const qrcode = require("qrcode");
 
