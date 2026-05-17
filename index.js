@@ -15,16 +15,21 @@ let latestQR = null;
 app.get("/", async (req, res) => {
     if (!latestQR) {
         return res.send(`
-            <h2>QR belum ready</h2>
-            <p>Refresh halaman setelah bot jalan</p>
+            <h2>⏳ QR belum tersedia</h2>
+            <p>Silakan tunggu bot generate QR...</p>
         `);
     }
 
     const img = await qrcode.toDataURL(latestQR);
 
-    return res.send(`
-        <h1>SCAN QR WHATSAPP</h1>
-        <img src="${img}" />
+    res.send(`
+        <html>
+        <body style="text-align:center;font-family:Arial;">
+            <h2>SCAN QR WHATSAPP</h2>
+            <img src="${img}" style="width:300px;height:300px"/>
+            <p>Refresh jika QR tidak berubah</p>
+        </body>
+        </html>
     `);
 });
 
