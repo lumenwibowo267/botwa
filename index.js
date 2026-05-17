@@ -1,5 +1,6 @@
 const express = require("express");
 const qrcode = require("qrcode");
+
 const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -9,21 +10,22 @@ const {
 const app = express();
 let latestQR = null;
 
+// WEB SERVER QR
 app.get("/", async (req, res) => {
     if (!latestQR) {
-        return res.send("<h2>QR belum muncul, tunggu bot jalan...</h2>");
+        return res.send("<h2>QR belum muncul, tunggu bot...</h2>");
     }
 
-    const qrImage = await qrcode.toDataURL(latestQR);
+    const img = await qrcode.toDataURL(latestQR);
 
     res.send(`
-        <h2>Scan QR WhatsApp</h2>
-        <img src="${qrImage}" />
+        <h1>Scan QR WhatsApp</h1>
+        <img src="${img}" />
     `);
 });
 
 app.listen(3000, () => {
-    console.log("🌐 QR Web running: http://localhost:3000");
+    console.log("🌐 Buka QR di: http://localhost:3000");
 });
 
 async function startBot() {
@@ -41,7 +43,7 @@ async function startBot() {
 
         if (qr) {
             latestQR = qr;
-            console.log("QR updated (open http://localhost:3000)");
+            console.log("QR updated → buka http://localhost:3000");
         }
 
         if (connection === "open") {
