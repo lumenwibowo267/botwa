@@ -14,18 +14,18 @@ async function startBot() {
         printQRInTerminal: false // penting: harus false
     });
 
-    sock.ev.on("connection.update", (update) => {
-        const { connection, qr } = update;
+   sock.ev.on("connection.update", (update) => {
+    const { connection, qr } = update;
 
-        if (qr) {
-            console.log("\n=== SCAN QR DI BAWAH ===\n");
-            console.log(qr);
-        }
+    if (qr) {
+        console.log("\nSCAN QR INI DI WHATSAPP:\n");
+        require("qrcode-terminal").generate(qr, { small: true });
+    }
 
-        if (connection === "open") {
-            console.log("BOT CONNECTED");
-        }
-    });
+    if (connection === "open") {
+        console.log("BOT CONNECTED");
+    }
+});
 
     sock.ev.on("creds.update", saveCreds);
 }
