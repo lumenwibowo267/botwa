@@ -1,4 +1,3 @@
-console.log("🚀 BOT STARTED:", new Date().toISOString());
 const express = require("express");
 const qrcode = require("qrcode");
 
@@ -9,24 +8,28 @@ const {
 } = require("@whiskeysockets/baileys");
 
 const app = express();
+
 let latestQR = null;
 
-// WEB SERVER QR
+// DEBUG biar yakin server hidup
 app.get("/", async (req, res) => {
     if (!latestQR) {
-        return res.send("<h2>QR belum muncul, tunggu bot...</h2>");
+        return res.send(`
+            <h2>QR belum ready</h2>
+            <p>Refresh halaman setelah bot jalan</p>
+        `);
     }
 
     const img = await qrcode.toDataURL(latestQR);
 
-    res.send(`
-        <h1>Scan QR WhatsApp</h1>
+    return res.send(`
+        <h1>SCAN QR WHATSAPP</h1>
         <img src="${img}" />
     `);
 });
 
 app.listen(3000, () => {
-    console.log("🌐 Buka QR di: http://localhost:3000");
+    console.log("🌐 SERVER OK http://localhost:3000");
 });
 
 async function startBot() {
@@ -44,15 +47,15 @@ async function startBot() {
 
         if (qr) {
             latestQR = qr;
-            console.log("QR updated → buka http://localhost:3000");
+            console.log("QR SAVED (web ready)");
         }
 
         if (connection === "open") {
-            console.log("✅ BOT CONNECTED");
+            console.log("✅ CONNECTED");
         }
 
         if (connection === "close") {
-            console.log("❌ CONNECTION CLOSED");
+            console.log("❌ CLOSED");
         }
     });
 
