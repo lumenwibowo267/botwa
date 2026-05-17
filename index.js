@@ -16,27 +16,26 @@ async function startBot() {
         printQRInTerminal: false
     });
 
-    sock.ev.on("connection.update", (update) => {
-        const { connection, qr } = update;
+   sock.ev.on("connection.update", (update) => {
+    const { connection, qr } = update;
 
-        // 🔥 INI BAGIAN PENTING
-        if (qr) {
-            console.clear();
-            console.log("\n=== SCAN QR DI WHATSAPP ===\n");
+    if (qr) {
+        console.clear();
+        console.log("=== SCAN QR DI BAWAH ===\n");
 
-            qrcode.generate(qr, {
-                small: false   // jangan small biar tidak rusak
-            });
-        }
+        qrcode.generate(qr, {
+            small: false
+        });
+    }
 
-        if (connection === "open") {
-            console.log("BOT CONNECTED");
-        }
+    if (connection === "open") {
+        console.log("✅ BOT CONNECTED");
+    }
 
-        if (connection === "close") {
-            console.log("CONNECTION CLOSED");
-        }
-    });
+    if (connection === "close") {
+        console.log("❌ CONNECTION CLOSED");
+    }
+});
 
     sock.ev.on("creds.update", saveCreds);
 }
