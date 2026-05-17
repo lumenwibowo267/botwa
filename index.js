@@ -4,6 +4,8 @@ const {
     fetchLatestBaileysVersion
 } = require("@whiskeysockets/baileys");
 
+const qrcode = require("qrcode");
+
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState("./auth");
     const { version } = await fetchLatestBaileysVersion();
@@ -11,21 +13,23 @@ async function startBot() {
     const sock = makeWASocket({
         version,
         auth: state,
-        printQRInTerminal: false // penting: harus false
+        printQRInTerminal: false
     });
 
-   sock.ev.on("connection.update", (update) => {
-    const { connection, qr } = update;
+    sock.ev.on("connection.update", async (update) => {
+        const { connection, qr } = update;
 
-    if (qr) {
-        console.log("\nSCAN QR INI DI WHATSAPP:\n");
-        require("qrcode-terminal").generate(qr, { small: true });
-    }
+        if (qr) {
+            console.log("\nQR CODE LINK (OPEN IN BROWSER):");
 
-    if (connection === "open") {
-        console.log("BOT CONNECTED");
-    }
-});
+            const url = await qrcode.toDataURL(qr);
+            console.log(url);
+        }
+
+        if (connection === "open") {
+            console.log("BOT CONNECTED");
+        }
+    });
 
     sock.ev.on("creds.update", saveCreds);
 }
