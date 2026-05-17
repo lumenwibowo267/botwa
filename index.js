@@ -33,8 +33,8 @@ app.get("/", async (req, res) => {
     `);
 });
 
-app.listen(3000, () => {
-    console.log("🌐 SERVER OK http://localhost:3000");
+app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
+    console.log("SERVER RUNNING");
 });
 
 async function startBot() {
@@ -52,7 +52,7 @@ async function startBot() {
 
         if (qr) {
             latestQR = qr;
-            console.log("QR SAVED (web ready)");
+            console.log("QR LENGTH:", latestQR?.length);
         }
 
         if (connection === "open") {
