@@ -1,9 +1,11 @@
 const express = require("express");
 const qrcode = require("qrcode");
 
-const app = express();
-
-let latestQR = null;
+const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion
+} = require("@whiskeysockets/baileys");
 
 // 🔥 PENTING: selalu ambil QR terbaru saat request
 app.get("/", async (req, res) => {
