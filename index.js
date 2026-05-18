@@ -17,7 +17,7 @@ let latestQR = null;
 // =======================
 app.get("/", (req, res) => {
 
-    if (!latestQR || typeof latestQR !== "string") {
+    if (!latestQR) {
         return res.send(`
             <html>
             <head>
@@ -31,17 +31,14 @@ app.get("/", (req, res) => {
     }
 
     qrcode.toDataURL(latestQR, (err, url) => {
-        if (err) {
-            console.log("QR ERROR:", err);
-            return res.send("<h2>QR ERROR</h2>");
-        }
+        if (err) return res.send("QR ERROR");
 
         res.send(`
             <html>
             <head>
                 <meta http-equiv="refresh" content="3">
             </head>
-            <body style="text-align:center;font-family:Arial">
+            <body style="text-align:center">
                 <h2>SCAN QR WHATSAPP</h2>
                 <img src="${url}" width="300"/>
             </body>
@@ -51,14 +48,14 @@ app.get("/", (req, res) => {
 });
 
 // =======================
-// START SERVER
+// SERVER START
 // =======================
 app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
     console.log("SERVER RUNNING");
 });
 
 // =======================
-// BOT
+// BOT START
 // =======================
 async function startBot() {
 
@@ -75,20 +72,20 @@ async function startBot() {
     });
 
     // =======================
-    // FIX QR (INI YANG BENAR)
+    // 🔥 FIX QR YANG BENAR
     // =======================
     sock.ev.on("connection.update", (update) => {
 
-        const { connection } = update;
+        const { connection, qr } = update;
 
-        // 🔥 QR HARUS STRING VALID
-        if (typeof update.qr === "string" && update.qr.length > 20) {
-            latestQR = update.qr;
-            console.log("QR VALID RECEIVED:", latestQR.length);
+        // ✔ INI QR YANG VALID
+        if (qr && typeof qr === "string" && qr.length > 200) {
+            latestQR = qr;
+            console.log("QR REAL RECEIVED:", qr.length);
         }
 
         if (connection === "open") {
-            console.log("CONNECTED TO WHATSAPP");
+            console.log("CONNECTED");
             latestQR = null;
         }
 
@@ -101,10 +98,3 @@ async function startBot() {
 }
 
 startBot();
-
-// =======================
-// DEBUG
-// =======================
-setInterval(() => {
-    console.log("QR TYPE:", typeof latestQR, "LENGTH:", latestQR?.length);
-}, 3000);
