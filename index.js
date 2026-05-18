@@ -13,24 +13,29 @@ let latestQR = null;
 
 // Web QR
 app.get("/", async (req, res) => {
-    try {
-        if (!latestQR) {
-            return res.send("<h2>QR belum tersedia... refresh lagi</h2>");
-        }
-
-        const qrImage = await qrcode.toDataURL(latestQR);
-
-        res.send(`
+    if (!latestQR) {
+        return res.send(`
             <html>
-                <body style="text-align:center;font-family:Arial">
-                    <h2>SCAN QR :contentReference[oaicite:0]{index=0}</h2>
-                    <img src="${qrImage}" width="300"/>
-                </body>
+            <body style="text-align:center">
+                <h2>QR belum tersedia...</h2>
+                <script>
+                    setTimeout(()=>location.reload(), 2000)
+                </script>
+            </body>
             </html>
         `);
-    } catch (err) {
-        res.send("Gagal render QR");
     }
+
+    const qrImage = await qrcode.toDataURL(latestQR);
+
+    res.send(`
+        <html>
+        <body style="text-align:center">
+            <h2>SCAN QR</h2>
+            <img src="${qrImage}" width="300"/>
+        </body>
+        </html>
+    `);
 });
 
 // Start web server
