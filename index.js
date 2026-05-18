@@ -17,38 +17,43 @@ let sock;
 // WEB SERVER
 // =======================
 app.get("/", async (req, res) => {
-    if (!latestQR) {
+    const qr = latestQR;
+
+    if (!qr) {
         return res.send(`
             <html>
             <head>
-                <meta http-equiv="refresh" content="2">
+                <meta http-equiv="refresh" content="1">
             </head>
             <body style="text-align:center;font-family:Arial">
                 <h2>QR belum tersedia...</h2>
-                <p>Menunggu QR dari WhatsApp...</p>
+                <p>Auto refresh tiap 1 detik</p>
             </body>
             </html>
         `);
     }
+
+    let img;
 
     try {
-        const img = await qrcode.toDataURL(latestQR);
-
-        return res.send(`
-            <html>
-            <head>
-                <meta http-equiv="refresh" content="5">
-            </head>
-            <body style="text-align:center;font-family:Arial">
-                <h2>SCAN QR WHATSAPP</h2>
-                <img src="${img}" width="300"/>
-                <p>Auto refresh 5 detik</p>
-            </body>
-            </html>
-        `);
+        img = await qrcode.toDataURL(qr);
     } catch (err) {
-        return res.send("Gagal render QR");
+        console.log("QR RENDER ERROR:", err);
+        return res.send("<h2>QR ERROR</h2>");
     }
+
+    return res.send(`
+        <html>
+        <head>
+            <meta http-equiv="refresh" content="3">
+        </head>
+        <body style="text-align:center;font-family:Arial">
+            <h2>SCAN QR WHATSAPP</h2>
+            <img src="${img}" width="300"/>
+            <p>Refresh otomatis</p>
+        </body>
+        </html>
+    `);
 });
 
 // =======================
@@ -114,5 +119,5 @@ startBot();
 // DEBUG QR STATUS (opsional)
 // =======================
 setInterval(() => {
-    console.log("QR STATUS:", latestQR ? "AVAILABLE" : "NULL");
-}, 5000);
+    console.log("WEB QR CHECK:", latestQR ? latestQR.length : "NULL");
+}, 3000);
