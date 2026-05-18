@@ -4,8 +4,7 @@ const qrcode = require("qrcode");
 const {
     default: makeWASocket,
     useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    DisconnectReason
+    fetchLatestBaileysVersion
 } = require("@whiskeysockets/baileys");
 
 const app = express();
@@ -26,21 +25,20 @@ app.get("/", async (req, res) => {
                 <body style="text-align:center;font-family:Arial">
                     <h2>SCAN QR :contentReference[oaicite:0]{index=0}</h2>
                     <img src="${qrImage}" width="300"/>
-                    <br><br>
-                    <button onclick="location.reload()">Refresh QR</button>
                 </body>
             </html>
         `);
     } catch (err) {
-        res.send("Error render QR");
+        res.send("Gagal render QR");
     }
 });
 
-// Web server
-app.listen(3000, "0.0.0.0", () => {
+// Start web server
+app.listen(3000, () => {
     console.log("SERVER RUNNING → http://127.0.0.1:3000");
 });
 
+// Start bot
 async function startBot() {
     const { state, saveCreds } =
         await useMultiFileAuthState("./auth");
@@ -54,8 +52,7 @@ async function startBot() {
         printQRInTerminal: false
     });
 
-    sock.ev.on("connection.update", (update) => {
-        const { connection, qr, lastDisconnect } = update;
+    sock.ev.on("connection.update", ({ connection, qr }) => {
 
         if (qr) {
             latestQR = qr;
@@ -64,18 +61,6 @@ async function startBot() {
 
         if (connection === "open") {
             console.log("BOT CONNECTED");
-        }
-
-        if (connection === "close") {
-            const shouldReconnect =
-                lastDisconnect?.error?.output?.statusCode !== 401;
-
-            console.log("Connection closed");
-
-            if (shouldReconnect) {
-                console.log("Reconnecting...");
-                setTimeout(() => startBot(), 3000);
-            }
         }
     });
 
