@@ -17,6 +17,10 @@ let sock;
 // WEB SERVER
 // =======================
 app.get("/", async (req, res) => {
+
+    // 🔥 anti-cache penting
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+
     const qr = latestQR;
 
     if (!qr) {
@@ -33,27 +37,26 @@ app.get("/", async (req, res) => {
         `);
     }
 
-    let img;
-
     try {
-        img = await qrcode.toDataURL(qr);
+        const img = await qrcode.toDataURL(qr);
+
+        return res.send(`
+            <html>
+            <head>
+                <meta http-equiv="refresh" content="3">
+            </head>
+            <body style="text-align:center;font-family:Arial">
+                <h2>SCAN QR WHATSAPP</h2>
+                <img src="${img}" width="300"/>
+                <p>Auto refresh 3 detik</p>
+            </body>
+            </html>
+        `);
+
     } catch (err) {
         console.log("QR RENDER ERROR:", err);
         return res.send("<h2>QR ERROR</h2>");
     }
-
-    return res.send(`
-        <html>
-        <head>
-            <meta http-equiv="refresh" content="3">
-        </head>
-        <body style="text-align:center;font-family:Arial">
-            <h2>SCAN QR WHATSAPP</h2>
-            <img src="${img}" width="300"/>
-            <p>Refresh otomatis</p>
-        </body>
-        </html>
-    `);
 });
 
 // =======================
@@ -96,15 +99,18 @@ async function startBot() {
             latestQR = null;
         }
 
-        // RECONNECT (lebih aman daripada restart langsung)
+        // RECONNECT SAFE VERSION
         if (connection === "close") {
-            const shouldReconnect =
-                update.lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            const code = update.lastDisconnect?.error?.output?.statusCode;
 
-            console.log("CONNECTION CLOSED");
+            const shouldReconnect = code !== DisconnectReason.loggedOut;
+
+            console.log("CONNECTION CLOSED, CODE:", code);
 
             if (shouldReconnect) {
-                startBot();
+                setTimeout(() => {
+                    startBot();
+                }, 3000); // 🔥 biar tidak spam reconnect
             }
         }
     });
@@ -114,10 +120,9 @@ async function startBot() {
 
 startBot();
 
-
 // =======================
-// DEBUG QR STATUS (opsional)
+// DEBUG QR STATUS
 // =======================
 setInterval(() => {
-    console.log("WEB QR CHECK:", latestQR ? latestQR.length : "NULL");
+    console.log("QR STATUS:", latestQR ? "AVAILABLE" : "NULL");
 }, 3000);
