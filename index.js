@@ -11,10 +11,10 @@ const {
 const app = express();
 
 let latestQR = null;
-let sockInstance;
+let sock;
 
 // =======================
-// WEB SERVER QR
+// WEB SERVER
 // =======================
 app.get("/", async (req, res) => {
     if (!latestQR) {
@@ -36,24 +36,30 @@ app.get("/", async (req, res) => {
 
         return res.send(`
             <html>
+            <head>
+                <meta http-equiv="refresh" content="5">
+            </head>
             <body style="text-align:center;font-family:Arial">
                 <h2>SCAN QR WHATSAPP</h2>
                 <img src="${img}" width="300"/>
+                <p>Auto refresh 5 detik</p>
             </body>
             </html>
         `);
-    } catch (e) {
+    } catch (err) {
         return res.send("Gagal render QR");
     }
 });
 
-// penting untuk Railway / hosting
+// =======================
+// SERVER START
+// =======================
 app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
     console.log("SERVER RUNNING");
 });
 
 // =======================
-// BOT WHATSAPP
+// BOT START
 // =======================
 async function startBot() {
     console.log("STARTING BOT...");
@@ -64,33 +70,49 @@ async function startBot() {
     const { version } =
         await fetchLatestBaileysVersion();
 
-    sockInstance = makeWASocket({
+    sock = makeWASocket({
         version,
         auth: state,
         printQRInTerminal: false
     });
 
-    // 🔥 QR HANDLER YANG BENAR
-    sockInstance.ev.on("connection.update", (update) => {
+    sock.ev.on("connection.update", (update) => {
         const { connection, qr } = update;
 
+        // 🔥 QR UPDATE
         if (qr) {
             latestQR = qr;
-            console.log("QR UPDATED (WEB READY)");
+            console.log("QR UPDATED (READY FOR WEB)");
         }
 
+        // CONNECTED
         if (connection === "open") {
             console.log("CONNECTED TO WHATSAPP");
-            latestQR = null; // clear QR setelah login
+            latestQR = null;
         }
 
+        // RECONNECT (lebih aman daripada restart langsung)
         if (connection === "close") {
-            console.log("CONNECTION CLOSED → RESTART");
-            startBot();
+            const shouldReconnect =
+                update.lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+
+            console.log("CONNECTION CLOSED");
+
+            if (shouldReconnect) {
+                startBot();
+            }
         }
     });
 
-    sockInstance.ev.on("creds.update", saveCreds);
+    sock.ev.on("creds.update", saveCreds);
 }
 
 startBot();
+
+
+// =======================
+// DEBUG QR STATUS (opsional)
+// =======================
+setInterval(() => {
+    console.log("QR STATUS:", latestQR ? "AVAILABLE" : "NULL");
+}, 5000);
