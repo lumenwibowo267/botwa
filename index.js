@@ -40,6 +40,8 @@ app.listen(3000, () => {
 
 // Start bot
 async function startBot() {
+    console.log("STARTING BOT...");
+
     const { state, saveCreds } =
         await useMultiFileAuthState("./auth");
 
@@ -52,7 +54,10 @@ async function startBot() {
         printQRInTerminal: false
     });
 
-    sock.ev.on("connection.update", ({ connection, qr }) => {
+    sock.ev.on("connection.update", (update) => {
+        console.log("UPDATE:", update.connection);
+
+        const { connection, qr } = update;
 
         if (qr) {
             latestQR = qr;
@@ -61,6 +66,10 @@ async function startBot() {
 
         if (connection === "open") {
             console.log("BOT CONNECTED");
+        }
+
+        if (connection === "close") {
+            console.log("BOT DISCONNECTED");
         }
     });
 
