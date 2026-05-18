@@ -22,27 +22,28 @@ app.get("/", async (req, res) => {
         return res.send(`
             <html>
             <head>
-                <meta http-equiv="refresh" content="2">
+                <meta http-equiv="refresh" content="1">
             </head>
             <body style="text-align:center;font-family:Arial">
                 <h2>QR belum tersedia</h2>
-                <p>Menunggu QR dari WhatsApp...</p>
+                <p>Menunggu QR WhatsApp...</p>
             </body>
             </html>
         `);
     }
 
     try {
-        const img = await qrcode.toDataURL(latestQR);
+        const qrImage = await qrcode.toDataURL(latestQR);
 
         return res.send(`
             <html>
             <head>
-                <meta http-equiv="refresh" content="5">
+                <meta http-equiv="refresh" content="3">
             </head>
             <body style="text-align:center;font-family:Arial">
                 <h2>SCAN QR WHATSAPP</h2>
-                <img src="${img}" width="300"/>
+                <img src="${qrImage}" width="300"/>
+                <p>Refresh otomatis setiap 3 detik</p>
             </body>
             </html>
         `);
@@ -54,14 +55,14 @@ app.get("/", async (req, res) => {
 });
 
 // =======================
-// SERVER START
+// START SERVER
 // =======================
 app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
     console.log("SERVER RUNNING");
 });
 
 // =======================
-// BOT START
+// BOT WHATSAPP
 // =======================
 async function startBot() {
     console.log("STARTING BOT...");
@@ -72,24 +73,30 @@ async function startBot() {
     sock = makeWASocket({
         version,
         auth: state,
-        printQRInTerminal: true
+        printQRInTerminal: false,
+        browser: ["BotWA", "Chrome", "1.0.0"]
     });
 
+    // =======================
+    // CONNECTION HANDLER
+    // =======================
     sock.ev.on("connection.update", (update) => {
 
-        const { connection, qr } = update;
+        const { connection } = update;
 
-        // ✅ INI YANG BENAR UNTUK QR
-        if (qr) {
-            latestQR = qr;
-            console.log("QR RECEIVED:", qr.length);
+        // ✅ QR HANDLER (FIX UTAMA)
+        if (update.qr) {
+            latestQR = update.qr;
+            console.log("QR RECEIVED:", update.qr.length);
         }
 
+        // CONNECTED
         if (connection === "open") {
             console.log("CONNECTED TO WHATSAPP");
             latestQR = null;
         }
 
+        // RECONNECT LOGIC
         if (connection === "close") {
             const shouldReconnect =
                 update.lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -105,4 +112,14 @@ async function startBot() {
     sock.ev.on("creds.update", saveCreds);
 }
 
+// =======================
+// START BOT
+// =======================
 startBot();
+
+// =======================
+// DEBUG QR STATUS
+// =======================
+setInterval(() => {
+    console.log("QR STATUS:", latestQR ? latestQR.length : "NULL");
+}, 3000);
