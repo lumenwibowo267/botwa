@@ -48,30 +48,25 @@ async function startBot() {
     const { version } =
         await fetchLatestBaileysVersion();
 
-    const sock = makeWASocket({
-        version,
-        auth: state,
-        printQRInTerminal: false
-    });
+  const sock = makeWASocket({
+    version,
+    auth: state,
+    printQRInTerminal: true,
+    browser: ["Bot", "Chrome", "1.0.0"]
+});
 
     sock.ev.on("connection.update", (update) => {
-        console.log("UPDATE:", update.connection);
+    console.log("STATE:", update.connection);
 
-        const { connection, qr } = update;
+    if (update.qr) {
+        latestQR = update.qr;
+        console.log("QR GENERATED");
+    }
 
-        if (qr) {
-            latestQR = qr;
-            console.log("QR READY");
-        }
-
-        if (connection === "open") {
-            console.log("BOT CONNECTED");
-        }
-
-        if (connection === "close") {
-            console.log("BOT DISCONNECTED");
-        }
-    });
+    if (update.connection === "open") {
+        console.log("CONNECTED SUCCESS");
+    }
+});
 
     sock.ev.on("creds.update", saveCreds);
 }
