@@ -4,46 +4,57 @@ const qrcode = require("qrcode");
 const {
     default: makeWASocket,
     useMultiFileAuthState,
-    fetchLatestBaileysVersion
+    fetchLatestBaileysVersion,
+    DisconnectReason
 } = require("@whiskeysockets/baileys");
 
 const app = express();
 
 let latestQR = null;
+let sockInstance;
 
-// Web QR
+// =======================
+// WEB SERVER QR
+// =======================
 app.get("/", async (req, res) => {
     if (!latestQR) {
         return res.send(`
             <html>
-            <body style="text-align:center">
+            <head>
+                <meta http-equiv="refresh" content="2">
+            </head>
+            <body style="text-align:center;font-family:Arial">
                 <h2>QR belum tersedia...</h2>
-                <script>
-                    setTimeout(()=>location.reload(), 2000)
-                </script>
+                <p>Menunggu QR dari WhatsApp...</p>
             </body>
             </html>
         `);
     }
 
-    const qrImage = await qrcode.toDataURL(latestQR);
+    try {
+        const img = await qrcode.toDataURL(latestQR);
 
-    res.send(`
-        <html>
-        <body style="text-align:center">
-            <h2>SCAN QR</h2>
-            <img src="${qrImage}" width="300"/>
-        </body>
-        </html>
-    `);
+        return res.send(`
+            <html>
+            <body style="text-align:center;font-family:Arial">
+                <h2>SCAN QR WHATSAPP</h2>
+                <img src="${img}" width="300"/>
+            </body>
+            </html>
+        `);
+    } catch (e) {
+        return res.send("Gagal render QR");
+    }
 });
 
-// Start web server
-app.listen(3000, () => {
-    console.log("SERVER RUNNING → http://127.0.0.1:3000");
+// penting untuk Railway / hosting
+app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
+    console.log("SERVER RUNNING");
 });
 
-// Start bot
+// =======================
+// BOT WHATSAPP
+// =======================
 async function startBot() {
     console.log("STARTING BOT...");
 
@@ -53,29 +64,33 @@ async function startBot() {
     const { version } =
         await fetchLatestBaileysVersion();
 
-  const sock = makeWASocket({
-    version,
-    auth: state,
-    printQRInTerminal: true,
-    browser: ["Bot", "Chrome", "1.0.0"]
-});
+    sockInstance = makeWASocket({
+        version,
+        auth: state,
+        printQRInTerminal: false
+    });
 
-    sock.ev.on("connection.update", (update) => {
-    console.log("STATE:", update.connection);
+    // 🔥 QR HANDLER YANG BENAR
+    sockInstance.ev.on("connection.update", (update) => {
+        const { connection, qr } = update;
 
-    const qr = update.qr || update?.connectionUpdate?.qr;
+        if (qr) {
+            latestQR = qr;
+            console.log("QR UPDATED (WEB READY)");
+        }
 
-    if (qr) {
-        latestQR = qr;
-        console.log("QR SAVED:", qr.length);
-    }
+        if (connection === "open") {
+            console.log("CONNECTED TO WHATSAPP");
+            latestQR = null; // clear QR setelah login
+        }
 
-    if (update.connection === "open") {
-        console.log("CONNECTED SUCCESS");
-    }
-});
+        if (connection === "close") {
+            console.log("CONNECTION CLOSED → RESTART");
+            startBot();
+        }
+    });
 
-    sock.ev.on("creds.update", saveCreds);
+    sockInstance.ev.on("creds.update", saveCreds);
 }
 
 startBot();
