@@ -11,22 +11,20 @@ const {
 const app = express();
 
 let latestQR = null;
-let sock;
 
 // =======================
 // WEB SERVER
 // =======================
 app.get("/", (req, res) => {
 
-    if (!latestQR || latestQR.length < 20) {
+    if (!latestQR || typeof latestQR !== "string") {
         return res.send(`
             <html>
             <head>
                 <meta http-equiv="refresh" content="1">
             </head>
             <body style="text-align:center;font-family:Arial">
-                <h2>QR belum tersedia...</h2>
-                <p>Menunggu WhatsApp generate QR</p>
+                <h2>Menunggu QR WhatsApp...</h2>
             </body>
             </html>
         `);
@@ -35,7 +33,7 @@ app.get("/", (req, res) => {
     qrcode.toDataURL(latestQR, (err, url) => {
         if (err) {
             console.log("QR ERROR:", err);
-            return res.send("<h2>QR render error</h2>");
+            return res.send("<h2>QR ERROR</h2>");
         }
 
         res.send(`
@@ -46,7 +44,6 @@ app.get("/", (req, res) => {
             <body style="text-align:center;font-family:Arial">
                 <h2>SCAN QR WHATSAPP</h2>
                 <img src="${url}" width="300"/>
-                <p>Auto refresh 3 detik</p>
             </body>
             </html>
         `);
@@ -54,22 +51,23 @@ app.get("/", (req, res) => {
 });
 
 // =======================
-// START EXPRESS SERVER
+// START SERVER
 // =======================
 app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
     console.log("SERVER RUNNING");
 });
 
 // =======================
-// START BOT
+// BOT
 // =======================
 async function startBot() {
+
     console.log("STARTING BOT...");
 
     const { state, saveCreds } = await useMultiFileAuthState("./auth");
     const { version } = await fetchLatestBaileysVersion();
 
-    sock = makeWASocket({
+    const sock = makeWASocket({
         version,
         auth: state,
         printQRInTerminal: false,
@@ -77,51 +75,36 @@ async function startBot() {
     });
 
     // =======================
-    // CONNECTION UPDATE
+    // FIX QR (INI YANG BENAR)
     // =======================
     sock.ev.on("connection.update", (update) => {
 
-        const { connection, qr, lastDisconnect } = update;
+        const { connection } = update;
 
-        // 🔥 QR HANDLER (FIX UTAMA)
-        if (qr) {
-            latestQR = qr;
-            console.log("QR RECEIVED:", qr.length);
+        // 🔥 QR HARUS STRING VALID
+        if (typeof update.qr === "string" && update.qr.length > 20) {
+            latestQR = update.qr;
+            console.log("QR VALID RECEIVED:", latestQR.length);
         }
 
-        // CONNECTED
         if (connection === "open") {
             console.log("CONNECTED TO WHATSAPP");
             latestQR = null;
         }
 
-        // RECONNECT HANDLER
         if (connection === "close") {
-
-            const shouldReconnect =
-                lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-
-            console.log("CONNECTION CLOSED");
-
-            if (shouldReconnect) {
-                setTimeout(() => {
-                    startBot();
-                }, 3000);
-            }
+            console.log("DISCONNECTED");
         }
     });
 
     sock.ev.on("creds.update", saveCreds);
 }
 
-// =======================
-// INIT BOT
-// =======================
 startBot();
 
 // =======================
-// DEBUG QR STATUS
+// DEBUG
 // =======================
 setInterval(() => {
-    console.log("QR STATUS:", latestQR ? latestQR.length : "NULL");
+    console.log("QR TYPE:", typeof latestQR, "LENGTH:", latestQR?.length);
 }, 3000);
