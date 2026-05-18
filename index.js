@@ -1,5 +1,4 @@
 const express = require("express");
-const qrcode = require("qrcode");
 
 const {
     default: makeWASocket,
@@ -11,19 +10,15 @@ const {
 const app = express();
 
 let latestQR = null;
-let sock;
 
 // =======================
-// WEB SERVER
+// WEB
 // =======================
-app.get("/", async (req, res) => {
+app.get("/", (req, res) => {
 
-    // 🔥 anti-cache penting
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.setHeader("Cache-Control", "no-store");
 
-    const qr = latestQR;
-
-    if (!qr) {
+    if (!latestQR) {
         return res.send(`
             <html>
             <head>
@@ -31,54 +26,41 @@ app.get("/", async (req, res) => {
             </head>
             <body style="text-align:center;font-family:Arial">
                 <h2>QR belum tersedia...</h2>
-                <p>Auto refresh tiap 1 detik</p>
+                <p>Menunggu WhatsApp QR...</p>
             </body>
             </html>
         `);
     }
 
-    try {
-        const img = await qrcode.toDataURL(qr);
-
-        return res.send(`
-            <html>
-            <head>
-                <meta http-equiv="refresh" content="3">
-            </head>
-            <body style="text-align:center;font-family:Arial">
-                <h2>SCAN QR WHATSAPP</h2>
-                <img src="${img}" width="300"/>
-                <p>Auto refresh 3 detik</p>
-            </body>
-            </html>
-        `);
-
-    } catch (err) {
-        console.log("QR RENDER ERROR:", err);
-        return res.send("<h2>QR ERROR</h2>");
-    }
+    // 🔥 langsung render QR tanpa qrcode.toDataURL
+    return res.send(`
+        <html>
+        <body style="text-align:center;font-family:Arial">
+            <h2>SCAN QR WHATSAPP</h2>
+            <img src="${latestQR}" style="width:300px"/>
+            <p>Refresh otomatis</p>
+        </body>
+        </html>
+    `);
 });
 
 // =======================
-// SERVER START
+// SERVER
 // =======================
 app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
     console.log("SERVER RUNNING");
 });
 
 // =======================
-// BOT START
+// BOT
 // =======================
 async function startBot() {
     console.log("STARTING BOT...");
 
-    const { state, saveCreds } =
-        await useMultiFileAuthState("./auth");
+    const { state, saveCreds } = await useMultiFileAuthState("./auth");
+    const { version } = await fetchLatestBaileysVersion();
 
-    const { version } =
-        await fetchLatestBaileysVersion();
-
-    sock = makeWASocket({
+    const sock = makeWASocket({
         version,
         auth: state,
         printQRInTerminal: false
@@ -87,30 +69,22 @@ async function startBot() {
     sock.ev.on("connection.update", (update) => {
         const { connection, qr } = update;
 
-        // 🔥 QR UPDATE
         if (qr) {
-            latestQR = qr;
-            console.log("QR UPDATED (READY FOR WEB)");
+            latestQR = qr; // 🔥 SIMPAN RAW QR
+            console.log("QR UPDATED (READY)");
         }
 
-        // CONNECTED
         if (connection === "open") {
-            console.log("CONNECTED TO WHATSAPP");
+            console.log("CONNECTED");
             latestQR = null;
         }
 
-        // RECONNECT SAFE VERSION
         if (connection === "close") {
             const code = update.lastDisconnect?.error?.output?.statusCode;
-
             const shouldReconnect = code !== DisconnectReason.loggedOut;
 
-            console.log("CONNECTION CLOSED, CODE:", code);
-
             if (shouldReconnect) {
-                setTimeout(() => {
-                    startBot();
-                }, 3000); // 🔥 biar tidak spam reconnect
+                setTimeout(startBot, 3000);
             }
         }
     });
@@ -120,9 +94,4 @@ async function startBot() {
 
 startBot();
 
-// =======================
-// DEBUG QR STATUS
-// =======================
-setInterval(() => {
-    console.log("QR STATUS:", latestQR ? "AVAILABLE" : "NULL");
-}, 3000);
+console.log("QR LENGTH:", latestQR?.length);
