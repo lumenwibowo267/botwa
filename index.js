@@ -58,9 +58,11 @@ async function startBot() {
     sock.ev.on("connection.update", (update) => {
     console.log("STATE:", update.connection);
 
-    if (update.qr) {
-        latestQR = update.qr;
-        console.log("QR GENERATED");
+    const qr = update.qr || update?.connectionUpdate?.qr;
+
+    if (qr) {
+        latestQR = qr;
+        console.log("QR SAVED:", qr.length);
     }
 
     if (update.connection === "open") {
