@@ -49,17 +49,22 @@ async function startBot() {
     });
 
     sock.ev.on("connection.update", (update) => {
-        const { qr, connection } = update;
+    const { connection, qr } = update;
 
-        if (qr) {
-            latestQR = qr;
-            console.log("QR READY");
-        }
+    if (qr) {
+        latestQR = qr;
+        console.log("QR READY");
+    }
 
-        if (connection === "open") {
-            console.log("BOT CONNECTED");
-        }
-    });
+    if (connection === "open") {
+        console.log("BOT CONNECTED");
+    }
+
+    if (connection === "close") {
+        console.log("Connection lost...");
+        startBot();
+    }
+});
 
     sock.ev.on("creds.update", saveCreds);
 }
