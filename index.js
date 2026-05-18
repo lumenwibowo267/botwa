@@ -16,53 +16,52 @@ let sock;
 // =======================
 // WEB SERVER
 // =======================
-app.get("/", async (req, res) => {
+app.get("/", (req, res) => {
 
-    if (!latestQR) {
+    if (!latestQR || latestQR.length < 20) {
         return res.send(`
             <html>
             <head>
                 <meta http-equiv="refresh" content="1">
             </head>
             <body style="text-align:center;font-family:Arial">
-                <h2>QR belum tersedia</h2>
-                <p>Menunggu QR WhatsApp...</p>
+                <h2>QR belum tersedia...</h2>
+                <p>Menunggu WhatsApp generate QR</p>
             </body>
             </html>
         `);
     }
 
-    try {
-        const qrImage = await qrcode.toDataURL(latestQR);
+    qrcode.toDataURL(latestQR, (err, url) => {
+        if (err) {
+            console.log("QR ERROR:", err);
+            return res.send("<h2>QR render error</h2>");
+        }
 
-        return res.send(`
+        res.send(`
             <html>
             <head>
                 <meta http-equiv="refresh" content="3">
             </head>
             <body style="text-align:center;font-family:Arial">
                 <h2>SCAN QR WHATSAPP</h2>
-                <img src="${qrImage}" width="300"/>
-                <p>Refresh otomatis setiap 3 detik</p>
+                <img src="${url}" width="300"/>
+                <p>Auto refresh 3 detik</p>
             </body>
             </html>
         `);
-
-    } catch (err) {
-        console.log("QR ERROR:", err);
-        return res.send("<h2>QR render error</h2>");
-    }
+    });
 });
 
 // =======================
-// START SERVER
+// START EXPRESS SERVER
 // =======================
 app.listen(process.env.PORT || 3000, "0.0.0.0", () => {
     console.log("SERVER RUNNING");
 });
 
 // =======================
-// BOT WHATSAPP
+// START BOT
 // =======================
 async function startBot() {
     console.log("STARTING BOT...");
@@ -78,16 +77,16 @@ async function startBot() {
     });
 
     // =======================
-    // CONNECTION HANDLER
+    // CONNECTION UPDATE
     // =======================
     sock.ev.on("connection.update", (update) => {
 
-        const { connection } = update;
+        const { connection, qr, lastDisconnect } = update;
 
-        // ✅ QR HANDLER (FIX UTAMA)
-        if (update.qr) {
-            latestQR = update.qr;
-            console.log("QR RECEIVED:", update.qr.length);
+        // 🔥 QR HANDLER (FIX UTAMA)
+        if (qr) {
+            latestQR = qr;
+            console.log("QR RECEIVED:", qr.length);
         }
 
         // CONNECTED
@@ -96,15 +95,18 @@ async function startBot() {
             latestQR = null;
         }
 
-        // RECONNECT LOGIC
+        // RECONNECT HANDLER
         if (connection === "close") {
+
             const shouldReconnect =
-                update.lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+                lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
 
             console.log("CONNECTION CLOSED");
 
             if (shouldReconnect) {
-                setTimeout(startBot, 3000);
+                setTimeout(() => {
+                    startBot();
+                }, 3000);
             }
         }
     });
@@ -113,7 +115,7 @@ async function startBot() {
 }
 
 // =======================
-// START BOT
+// INIT BOT
 // =======================
 startBot();
 
